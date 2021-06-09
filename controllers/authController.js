@@ -17,7 +17,6 @@ const login = async(req, res = response) => {
                 msg: 'Usuario Incorrecto.!'
             })
         }
-        console.log(data_usuario.rows);
         // Validar passwords
         const validPassword = bcrypt.compareSync(password, data_usuario.rows[0].password);
 
@@ -86,7 +85,115 @@ const createUser = async(req, res = response) => {
 }
 
 
+
+const getUsuarios = async(req, res = response) => {
+    try {      
+        const data_usuario = await pool.query(`SELECT usuario.idusuario, usuario.usuario, usuario.password, rol.idrol, rol.nomrol FROM usuario, rol WHERE usuario.idrol=rol.idrol`)
+        if(data_usuario.rows.length===0){
+            return res.status(400).json({
+                ok: false,
+                msg: 'No hay usuarios!'
+            })
+        }
+        res.status(200).json({
+            ok: true,
+            usuarios: data_usuario.rows
+        })
+    } catch (error) {
+        return res.status(500).json({
+            ok: false,
+            msg: 'Algo salio mal.!'
+        })
+    }
+}
+
+const getUsuariosById = async(req, res = response) => {
+    try {      
+        const { idusuario } = req.params;
+        const data_usuario = await pool.query(`SELECT usuario.idusuario, usuario.usuario, usuario.password, rol.idrol, rol.nomrol FROM usuario, rol WHERE usuario.idrol = rol.idrol and usuario.idusuario=$1`, [idusuario])
+        if(data_usuario.rows.length===0){
+            return res.status(400).json({
+                ok: false,
+                msg: 'Usuario no encontrado!'
+            })
+        }
+        res.status(200).json({
+            ok: true,
+            usuarios: data_usuario.rows
+        })
+    } catch (error) {
+        return res.status(500).json({
+            ok: false,
+            msg: 'Algo salio mal.!'
+        })
+    }
+}
+
+const deleteUsuarios = async(req, res = response) => {
+    try {      
+        const { idusuario } = req.params;
+        const usuario_eliminado = await pool.query(`DELETE FROM usuario WHERE idusuario=$1 RETURNING *`, [idusuario])
+        if(usuario_eliminado.rowCount===0){
+            return res.status(400).json({
+                ok: false,
+                msg: 'No existe este Usuario!'
+            })
+        }
+
+        res.status(200).json({
+            ok: true,
+            msg: `Usuario ${ usuario_eliminado.rows[0].usuario } eliminado correctamente!`
+        })
+    } catch (error) {
+        return res.status(500).json({
+            ok: false,
+            msg: 'Algo salio mal.!'
+        })
+    }
+}
+
+const updateUsuarios = async(req, res = response) => {
+    try {      
+        const { idusuario } = req.params;
+        const { usuario, password, estado, idrol  } = req.body;
+
+        const existe_usuario = await pool.query(`SELECT * FROM usuario WHERE usuario=$1`, [usuario])
+        if(existe_usuario.rows.length>0){
+            return res.status(400).json({
+                ok: false,
+                msg: 'El Usuario ya existe.!'
+            })
+        }
+
+         const salt = bcrypt.genSaltSync();
+         const password_encrypt = bcrypt.hashSync(password, salt);
+
+        const usuario_modificado = await pool.query(`UPDATE usuario SET usuario=$1, password=$2, estado=$3, idrol=$4 WHERE idusuario=$5`, [usuario, password_encrypt, estado, idrol, idusuario])
+        if(usuario_modificado.rowCount===0){
+            return res.status(400).json({
+                ok: false,
+                msg: 'No existe este Usuario!'
+            })
+        }
+        res.status(200).json({
+            ok: true,
+            msg: `Usuario modificado correctamente!`
+        })
+    } catch (error) {
+        return res.status(500).json({
+            ok: false,
+            msg: 'Algo salio mal.!'
+        })
+    }
+}
+
+
+
 module.exports = {
     login,
-    createUser
+    createUser,
+    getUsuarios,
+    getUsuariosById,
+    deleteUsuarios,
+    updateUsuarios
 }
