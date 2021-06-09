@@ -24,6 +24,37 @@ const generarJWT = (id_usuario, usuario, nomrol) =>{
     
 }
 
+
+const validarJWT = (req, res, next) =>{
+
+     // Leer el Token 
+     const token = req.header('token');
+
+     // console.log(token);
+ 
+     if(!token){
+         return res.status(401).json({
+             ok: false,
+             msg: 'No hay token en la peticion'
+         })
+     }
+ 
+     try{
+         
+         jwt.verify(token, process.env.JWT_SECRET);
+
+         next();
+ 
+     }catch(error){
+         return res.status(401).json({
+             ok:false,
+             msg: 'Token Incorrecto..'
+         })
+     }
+}
+
+
 module.exports = {
-    generarJWT
+    generarJWT,
+    validarJWT
 }
